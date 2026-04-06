@@ -6,7 +6,7 @@ services:
     volumes:
       - filabox-data:/app/prisma
     environment:
-      - DATABASE_URL=file:./dev.db
+      - DATABASE_URL=file:/app/prisma/dev.db
       - PORT=3000
 
 volumes:

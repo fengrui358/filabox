@@ -10,4 +10,5 @@ RUN npx prisma generate
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"]
+# Run migrations and seed, then start server
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm run start:prod"]
