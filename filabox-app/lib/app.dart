@@ -3,8 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/constants/app_theme.dart';
+import 'core/database/repositories/filament_repository.dart';
+import 'core/database/repositories/inventory_repository.dart';
+import 'features/filament/presentation/filament_detail_screen.dart';
+import 'features/filament/presentation/filament_form_screen.dart';
 import 'features/filament/presentation/filament_list_screen.dart';
+import 'features/inventory/presentation/inventory_detail_screen.dart';
+import 'features/inventory/presentation/inventory_form_screen.dart';
 import 'features/inventory/presentation/inventory_overview_screen.dart';
+import 'features/inventory/presentation/load_form_screen.dart';
+import 'features/inventory/presentation/unload_form_screen.dart';
+import 'features/position/presentation/position_list_screen.dart';
 import 'features/scanner/presentation/scanner_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 
@@ -34,10 +43,72 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Full-screen routes
       GoRoute(
         path: '/scan',
         name: 'scan',
         builder: (context, state) => const ScannerScreen(),
+      ),
+      GoRoute(
+        path: '/filaments/add',
+        name: 'filament_add',
+        builder: (context, state) => const FilamentFormScreen(),
+      ),
+      GoRoute(
+        path: '/filaments/:id',
+        name: 'filament_detail',
+        builder: (context, state) {
+          final filament = state.extra as FilamentType;
+          return FilamentDetailScreen(filament: filament);
+        },
+      ),
+      GoRoute(
+        path: '/filaments/:id/edit',
+        name: 'filament_edit',
+        builder: (context, state) {
+          final filament = state.extra as FilamentType;
+          return FilamentFormScreen(filament: filament);
+        },
+      ),
+      GoRoute(
+        path: '/inventory/add',
+        name: 'inventory_add',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return InventoryFormScreen(
+            preselectedFilament: extra?['filament'] as FilamentType?,
+            scannedCode: extra?['code'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/inventory/:id',
+        name: 'inventory_detail',
+        builder: (context, state) {
+          final item = state.extra as InventoryItem;
+          return InventoryDetailScreen(item: item);
+        },
+      ),
+      GoRoute(
+        path: '/inventory/:id/load',
+        name: 'inventory_load',
+        builder: (context, state) {
+          final item = state.extra as InventoryItem;
+          return LoadFormScreen(item: item);
+        },
+      ),
+      GoRoute(
+        path: '/inventory/:id/unload',
+        name: 'inventory_unload',
+        builder: (context, state) {
+          final item = state.extra as InventoryItem;
+          return UnloadFormScreen(item: item);
+        },
+      ),
+      GoRoute(
+        path: '/positions',
+        name: 'positions',
+        builder: (context, state) => const PositionListScreen(),
       ),
     ],
   );
@@ -59,10 +130,6 @@ class MainScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/scan'),
-        child: const Icon(Icons.qr_code_scanner),
-      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         destinations: const [

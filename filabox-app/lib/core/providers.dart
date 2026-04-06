@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import 'database/app_database.dart';
 import 'database/repositories/filament_repository.dart';
 import 'database/repositories/inventory_repository.dart';
 import 'database/repositories/position_repository.dart';
+import 'database/repositories/usage_record_repository.dart';
 import 'network/api_client.dart';
 import 'services/qr_service.dart';
 
@@ -34,6 +36,12 @@ final filamentModelsProvider = FutureProvider<List<String>>((ref) async {
     'SELECT DISTINCT model FROM filament_type WHERE is_deleted = 0 ORDER BY model',
   );
   return result.map((r) => r['model'] as String).toList();
+});
+
+// Single filament by ID
+final filamentByIdProvider =
+    FutureProvider.family<FilamentType?, String>((ref, id) async {
+  return FilamentType.getById(id);
 });
 
 // Inventory
@@ -105,6 +113,12 @@ final inventoryStatsProvider = FutureProvider<Map<String, int>>((ref) async {
   return stats;
 });
 
+// Single inventory item by ID
+final inventoryByIdProvider =
+    FutureProvider.family<InventoryItem?, String>((ref, id) async {
+  return InventoryItem.getById(id);
+});
+
 // Positions
 final positionsProvider = FutureProvider<List<Position>>((ref) async {
   final db = await AppDatabase.database;
@@ -118,3 +132,171 @@ final positionsProvider = FutureProvider<List<Position>>((ref) async {
 
 // QR
 final qrServiceProvider = Provider<QrPayload>((ref) => const QrPayload(code: '', type: ''));
+
+// RepositoryService — central place for all write operations
+final repositoryServiceProvider = Provider<RepositoryService>((ref) {
+  return RepositoryService(ref);
+});
+
+class RepositoryService {
+  final Ref _ref;
+  static const _uuid = Uuid();
+
+  RepositoryService(this._ref);
+
+  void _invalidateFilament() {
+    _ref.invalidate(filamentTypesProvider);
+    _ref.invalidate(filamentBrandsProvider);
+    _ref.invalidate(filamentModelsProvider);
+  }
+
+  void _invalidateInventory() {
+    _ref.invalidate(inventoryProvider);
+    _ref.invalidate(inventoryStatsProvider);
+  }
+
+  void _invalidatePositions() {
+    _ref.invalidate(positionsProvider);
+  }
+
+  // Filament mutations
+  Future<String> addFilamentType(FilamentType ft) async {
+    final id = await FilamentType.insert(ft);
+    _invalidateFilament();
+    return id;
+  }
+
+  Future<void> editFilamentType(FilamentType ft) async {
+    await FilamentType.update(ft);
+    _invalidateFilament();
+  }
+
+  Future<void> removeFilamentType(String id) async {
+    await FilamentType.softDelete(id);
+    _invalidateFilament();
+  }
+
+  // Inventory mutations
+  Future<String> addInventoryItem(InventoryItem item) async {
+    final id = await InventoryItem.insert(item);
+    // Create stock_in usage record
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: id,
+      action: 'stock_in',
+      occurredAt: DateTime.now(),
+      createdAt: DateTime.now(),
+    ));
+    _invalidateInventory();
+    return id;
+  }
+
+  Future<void> loadToPosition(String itemId, String positionId) async {
+    final now = DateTime.now();
+    await InventoryItem.updateStatus(
+      itemId,
+      status: 'loaded',
+      loadedPositionId: positionId,
+      loadedAt: now,
+    );
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: itemId,
+      action: 'load',
+      positionId: positionId,
+      occurredAt: now,
+      createdAt: now,
+    ));
+    _invalidateInventory();
+  }
+
+  Future<void> unloadFromPosition(String itemId, {double? remaining}) async {
+    final now = DateTime.now();
+    // Calculate duration if we have loadedAt
+    int? durationMinutes;
+    final item = await InventoryItem.getById(itemId);
+    if (item?.loadedAt != null) {
+      durationMinutes = now.difference(item!.loadedAt!).inMinutes;
+    }
+
+    final newStatus = (remaining != null && remaining <= 0) ? 'used_up' : 'standby';
+    final newRemaining = (remaining != null && remaining <= 0) ? 0.0 : (remaining ?? item?.remainingPercent ?? 100.0);
+
+    await InventoryItem.updateStatus(
+      itemId,
+      status: newStatus,
+      unloadedAt: now,
+      remainingPercent: newRemaining,
+    );
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: itemId,
+      action: newStatus == 'used_up' ? 'use_up' : 'unload',
+      positionId: item?.loadedPositionId,
+      occurredAt: now,
+      durationMinutes: durationMinutes,
+      createdAt: now,
+    ));
+    _invalidateInventory();
+  }
+
+  Future<void> startDrying(String itemId) async {
+    final now = DateTime.now();
+    await InventoryItem.updateStatus(itemId, status: 'drying');
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: itemId,
+      action: 'dry_start',
+      occurredAt: now,
+      createdAt: now,
+    ));
+    _invalidateInventory();
+  }
+
+  Future<void> endDrying(String itemId) async {
+    final now = DateTime.now();
+    await InventoryItem.updateStatus(itemId, status: 'standby');
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: itemId,
+      action: 'dry_end',
+      occurredAt: now,
+      createdAt: now,
+    ));
+    _invalidateInventory();
+  }
+
+  Future<void> markUsedUp(String itemId) async {
+    final now = DateTime.now();
+    await InventoryItem.updateStatus(
+      itemId,
+      status: 'used_up',
+      remainingPercent: 0,
+    );
+    await UsageRecord.insert(UsageRecord(
+      id: _uuid.v4(),
+      inventoryItemId: itemId,
+      action: 'use_up',
+      occurredAt: now,
+      createdAt: now,
+    ));
+    _invalidateInventory();
+  }
+
+  // Position mutations
+  Future<String> addPosition(Position p) async {
+    final id = await Position.insert(p);
+    _invalidatePositions();
+    return id;
+  }
+
+  Future<void> editPosition(Position p) async {
+    await Position.update(p);
+    _invalidatePositions();
+  }
+
+  Future<void> removePosition(String id) async {
+    await Position.softDelete(id);
+    _invalidatePositions();
+  }
+}

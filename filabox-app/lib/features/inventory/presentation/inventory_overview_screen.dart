@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/database/repositories/inventory_repository.dart';
 import '../../../core/providers.dart';
@@ -45,6 +46,13 @@ class _InventoryOverviewScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('FilaBox'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_box_outlined),
+            onPressed: () => context.push('/inventory/add'),
+            tooltip: '入库',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -151,7 +159,7 @@ class _InventoryOverviewScreenState
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) =>
-                            _InventoryTile(item: filtered[index]),
+                            _InventoryTile(item: filtered[index], onTap: () => context.push('/inventory/${filtered[index].id}', extra: filtered[index])),
                       ),
                     );
                   },
@@ -163,6 +171,11 @@ class _InventoryOverviewScreenState
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'scan',
+        onPressed: () => context.push('/scan'),
+        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }
@@ -211,8 +224,9 @@ class _StatCard extends StatelessWidget {
 
 class _InventoryTile extends StatelessWidget {
   final InventoryItem item;
+  final VoidCallback? onTap;
 
-  const _InventoryTile({required this.item});
+  const _InventoryTile({required this.item, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +258,7 @@ class _InventoryTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3),
       child: ListTile(
+        onTap: onTap,
         leading: Stack(
           children: [
             Container(

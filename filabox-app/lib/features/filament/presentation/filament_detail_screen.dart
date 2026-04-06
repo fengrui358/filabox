@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/database/repositories/filament_repository.dart';
@@ -17,7 +18,15 @@ class FilamentDetailScreen extends StatelessWidget {
         : theme.colorScheme.surfaceContainerHighest;
 
     return Scaffold(
-      appBar: AppBar(title: Text('${filament.brand} ${filament.model}')),
+      appBar: AppBar(
+        title: Text('${filament.brand} ${filament.model}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => context.push('/filaments/${filament.id}/edit', extra: filament),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -65,6 +74,14 @@ class FilamentDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.print),
                 label: const Text('打印二维码标签'),
                 onPressed: () {/* TODO: share/print QR */},
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: FilledButton.icon(
+                icon: const Icon(Icons.add_box_outlined),
+                label: const Text('入库新件'),
+                onPressed: () => context.push('/inventory/add', extra: {'filament': filament}),
               ),
             ),
             const SizedBox(height: 24),

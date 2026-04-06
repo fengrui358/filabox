@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/services/qr_service.dart';
+import 'scan_result_router.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -36,7 +37,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   if (payload != null) {
                     _processed = true;
                     _controller.stop();
-                    _handleScanResult(payload);
+                    ScanResultRouter.route(context, payload);
                     return;
                   }
                 }
@@ -76,35 +77,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
               icon: const Icon(Icons.flash_on, color: Colors.white),
               onPressed: () => _controller.toggleTorch(),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleScanResult(QrPayload payload) {
-    // TODO: Navigate to appropriate action screen based on payload
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('扫描结果'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('编码: ${payload.code}'),
-            Text('类型: ${payload.type}'),
-            if (payload.inventoryId != null)
-              Text('库存ID: ${payload.inventoryId}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: const Text('确定'),
           ),
         ],
       ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/database/repositories/filament_repository.dart';
 import '../../../core/providers.dart';
-import 'filament_detail_screen.dart';
 
 class FilamentListScreen extends ConsumerStatefulWidget {
   const FilamentListScreen({super.key});
@@ -32,6 +32,11 @@ class _FilamentListScreenState extends ConsumerState<FilamentListScreen> {
             onPressed: () => _showSearch(context),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'add_filament',
+        onPressed: () => context.push('/filaments/add'),
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
@@ -165,9 +170,7 @@ class _FilamentListScreenState extends ConsumerState<FilamentListScreen> {
   }
 
   void _navigateToDetail(BuildContext context, FilamentType filament) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => FilamentDetailScreen(filament: filament),
-    ));
+    context.push('/filaments/${filament.id}', extra: filament);
   }
 }
 
@@ -325,9 +328,7 @@ class _FilamentSearchDelegate extends SearchDelegate<String> {
               trailing: Text(f.code, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
               onTap: () {
                 close(context, query);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => FilamentDetailScreen(filament: f),
-                ));
+                context.push('/filaments/${f.id}', extra: f);
               },
             );
           },

@@ -1,3 +1,5 @@
+import '../app_database.dart';
+
 class FilamentType {
   final String id;
   final String code;
@@ -81,4 +83,53 @@ class FilamentType {
       };
 
   String get qrPayload => 'FILABOX:$code?v=1&t=filament_type';
+
+  // CRUD methods
+  static Future<String> insert(FilamentType ft) async {
+    final db = await AppDatabase.database;
+    await db.insert('filament_type', ft.toMap());
+    return ft.id;
+  }
+
+  static Future<void> update(FilamentType ft) async {
+    final db = await AppDatabase.database;
+    await db.update(
+      'filament_type',
+      ft.toMap(),
+      where: 'id = ?',
+      whereArgs: [ft.id],
+    );
+  }
+
+  static Future<void> softDelete(String id) async {
+    final db = await AppDatabase.database;
+    await db.update(
+      'filament_type',
+      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  static Future<FilamentType?> getById(String id) async {
+    final db = await AppDatabase.database;
+    final maps = await db.query(
+      'filament_type',
+      where: 'id = ? AND is_deleted = 0',
+      whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return FilamentType.fromMap(maps.first);
+  }
+
+  static Future<FilamentType?> getByCode(String code) async {
+    final db = await AppDatabase.database;
+    final maps = await db.query(
+      'filament_type',
+      where: 'code = ? AND is_deleted = 0',
+      whereArgs: [code],
+    );
+    if (maps.isEmpty) return null;
+    return FilamentType.fromMap(maps.first);
+  }
 }

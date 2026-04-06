@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -14,6 +15,13 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('跟随系统'),
             value: Theme.of(context).brightness == Brightness.dark,
             onChanged: (_) {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.place_outlined),
+            title: const Text('位置管理'),
+            subtitle: const Text('管理打印机位、烘干箱、存储位'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/positions'),
           ),
           const ListTile(
             leading: Icon(Icons.language),

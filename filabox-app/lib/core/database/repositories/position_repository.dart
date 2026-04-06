@@ -1,3 +1,5 @@
+import '../app_database.dart';
+
 class Position {
   final String id;
   final String name;
@@ -31,4 +33,26 @@ class Position {
         'sort_order': sortOrder,
         'is_active': isActive ? 1 : 0,
       };
+
+  // CRUD methods
+  static Future<String> insert(Position p) async {
+    final db = await AppDatabase.database;
+    await db.insert('position', p.toMap());
+    return p.id;
+  }
+
+  static Future<void> update(Position p) async {
+    final db = await AppDatabase.database;
+    await db.update('position', p.toMap(), where: 'id = ?', whereArgs: [p.id]);
+  }
+
+  static Future<void> softDelete(String id) async {
+    final db = await AppDatabase.database;
+    await db.update(
+      'position',
+      {'is_active': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }
