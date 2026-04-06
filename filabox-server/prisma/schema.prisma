@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model FilamentType {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  brand         String   @default("Bambu Lab")
+  model         String
+  diameter      Float    @default(1.75)
+  colorName     String   @map("color_name")
+  colorHex      String?  @map("color_hex")
+  printTempMin  Int?     @map("print_temp_min")
+  printTempMax  Int?     @map("print_temp_max")
+  bakeTemp      Int?     @map("bake_temp")
+  bakeTimeMin   Int?     @map("bake_time_min")
+  purchasePrice Float?   @map("purchase_price")
+  minPrice      Float?   @map("min_price")
+  sku           String?
+  notes         String?
+  link          String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+
+  inventoryItems InventoryItem[]
+
+  @@map("filament_type")
+}
+
+model InventoryItem {
+  id               String        @id @default(uuid())
+  filamentTypeId   String        @map("filament_type_id")
+  status           String        @default("standby")
+  actualPrice      Float?        @map("actual_price")
+  loadedPositionId String?       @map("loaded_position_id")
+  loadedAt         DateTime?     @map("loaded_at")
+  unloadedAt       DateTime?     @map("unloaded_at")
+  remainingPercent Float         @default(100) @map("remaining_percent")
+  notes            String?
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  isDeleted        Boolean       @default(false) @map("is_deleted")
+
+  filamentType  FilamentType @relation(fields: [filamentTypeId], references: [id])
+  loadedPosition Position?    @relation(fields: [loadedPositionId], references: [id])
+  usageRecords  UsageRecord[]
+
+  @@map("inventory_item")
+}
+
+model UsageRecord {
+  id              String   @id @default(uuid())
+  inventoryItemId String   @map("inventory_item_id")
+  action          String
+  positionId      String?  @map("position_id")
+  occurredAt      DateTime @default(now()) @map("occurred_at")
+  durationMinutes Int?     @map("duration_minutes")
+  metadata        String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  position      Position?     @relation(fields: [positionId], references: [id])
+
+  @@map("usage_record")
+}
+
+model Position {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("printer")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  inventoryItems InventoryItem[]
+  usageRecords   UsageRecord[]
+
+  @@map("position")
+}

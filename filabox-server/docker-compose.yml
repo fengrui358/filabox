@@ -1,0 +1,13 @@
+services:
+  filabox-server:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - filabox-data:/app/prisma
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - PORT=3000
+
+volumes:
+  filabox-data:
